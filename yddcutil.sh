@@ -514,13 +514,13 @@ Current: $CONTRAST" \
 		if [ $CONTRAST = 0 ]; then
 			true
 		else
-			ddcutil --sleep-multiplier=$SLEEPMULTIPLIER --bus=$BUS setvcp 10 - 1
+			ddcutil --sleep-multiplier=$SLEEPMULTIPLIER --bus=$BUS setvcp 12 - 1
 		fi
 	elif [ "$contrast_choice" -eq 12 ]; then
 		if [ $CONTRAST = 100 ]; then
 			true
 		else
-			ddcutil --sleep-multiplier=$SLEEPMULTIPLIER --bus=$BUS setvcp 10 + 1
+			ddcutil --sleep-multiplier=$SLEEPMULTIPLIER --bus=$BUS setvcp 12 + 1
 		fi
 	elif [ "$contrast_choice" -eq 98 ]; then
 		image_menu
