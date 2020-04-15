@@ -41,7 +41,10 @@ $( echo "$MONITORS")" --selectable-labels --buttons-layout=center --form --field
 }
 
 load_menu_items(){
-	CAPABILITIES="$(ddcutil capabilities --bus=$BUS --sleep-multiplier=2 --verbose)"
+	CAPABILITIES="$(ddcutil capabilities --bus=$BUS --sleep-multiplier=$SLEEPMULTIPLIER --verbose)"
+	if echo "$CAPABILITIES" | grep -iq "No monitor detected"; then
+		no_monitor
+	fi
 	MODEL="$(echo "$CAPABILITIES" | grep "model" | awk -F'model' '{print $2}' | awk -F'cmds' '{print $1}') on bus $BUS"
 	##### MAIN MENU
 	# IMAGE
@@ -307,10 +310,10 @@ load_menu_items(){
 		if echo "$CAPABILITIES" | grep -iq 'Feature: B0'; then
 			RESETBUTTONS=$RESETBUTTONS'--button=Save&amp;Load!dialog-warning!Save&amp;Load:6 '
 			#
-			if echo "$CAPABILITIES" | grep -q '01: Store current settings in the monitor'; then
+			if echo "$CAPABILITIES" | grep -iA1 'Feature: B0' | grep 'Values (unparsed):' | awk -F':' '{print $2}' | grep -iq '01'; then
 				RESETRESTOREBUTTONS=$RESETRESTOREBUTTONS'--button=Save!dialog-warning!Save:1 '
 			fi
-			if echo "$CAPABILITIES" | grep -q '02: Restore factory defaults for current mode'; then
+			if echo "$CAPABILITIES" | grep -iA1 'Feature: B0' | grep 'Values (unparsed):' | awk -F':' '{print $2}' | grep -iq '02'; then
 				RESETRESTOREBUTTONS=$RESETRESTOREBUTTONS'--button=Load!dialog-warning!Load:2 '
 			fi
 		fi
@@ -320,7 +323,7 @@ load_menu_items(){
 }
 
 main_menu(){
-	yad $YCOMMOPT --window-icon "monitor" --image "monitor" --title="$VENDOR $MODEL" --text="MENU" $MENUBUTTONS --button=Help!help-about-symbolic!Help:97 --button=Exit!exit!Exit:99
+	yad $YCOMMOPT --window-icon "monitor" --image "monitor" --title="$VENDOR $MODEL" --text="MENU" $MENUBUTTONS --button=Help!help-about-symbolic!Help:97 --button="Display"!monitor!"Display Selection":98 --button=Exit!exit!Exit:99
 	main_choice=$?
 	if [ "$main_choice" -eq 1 ]; then
 		image_menu
@@ -340,6 +343,8 @@ main_menu(){
 		reset_menu
 	elif [ "$main_choice" -eq 97 ]; then
 		yddutil_help
+	elif [ "$main_choice" -eq 98 ]; then
+		exec "$yddcutilrestart" $options
 	elif [ "$main_choice" -eq 99 ]; then
 		exit 0
 	else
@@ -1193,7 +1198,7 @@ $VOLUME"
 }
 
 info_advanced_menu(){
-	SERIAL="Serial Number: qqq"
+	SERIAL="Serial Number: $(ddcutil --sleep-multiplier=$SLEEPMULTIPLIER detect | grep /dev/i2c-$BUS -A 4 | grep -Po '(?<=Serial number: ).*')"
 	FPSBL="Flat Panel Sub-Pixel Layout: $(ddcutil --sleep-multiplier=$SLEEPMULTIPLIER --bus=$BUS getvcp b2 | awk -F': ' '{print $2}')"
 	DTT="Display Technology Type: $(ddcutil --sleep-multiplier=$SLEEPMULTIPLIER --bus=$BUS getvcp b6 | awk -F': ' '{print $2}')"
 	AEK="Application Enable Key: $(ddcutil --sleep-multiplier=$SLEEPMULTIPLIER --bus=$BUS getvcp c6 | awk -F': ' '{print $2}')"
@@ -1257,6 +1262,20 @@ reset_restore_menu(){
 			exit 0
 		fi
 	done
+}
+
+no_monitor(){
+	yad $YCOMMOPT --window-icon "error" --image "error" --text="$CAPABILITIES" --button=Help!help-about-symbolic!Help:97 --button="Display"!monitor!"Display Selection":98 --button=Exit!exit!Exit:99
+	main_choice=$?
+	if [ "$main_choice" -eq 97 ]; then
+		yddutil_help
+	elif [ "$main_choice" -eq 98 ]; then
+		exec "$yddcutilrestart" $options
+	elif [ "$main_choice" -eq 99 ]; then
+		exit 0
+	else
+		exit 0
+	fi
 }
 
 yddutil_help(){
@@ -1351,12 +1370,16 @@ Options:
 -s, --sleep-multiplier <VALUE>	Applies a multiplication factor to the DDC/CI specified sleep times
 -h, --help			Show this help
 "
-if echo $INVALID | grep -xq "1"; then
+if [ -n "$INVALID" ]; then
 	exit 1
 else
 	exit 0
 fi
 }
+
+yddcutilrestart=$(readlink -f "$0")
+options="$(echo $@ | sed -E 's/[-]?-b[b]?[u]?[s]?[ ]?[0-9]+//g')"
+YCOMMOPT='--center --image-on-top --wrap --sticky --on-top --buttons-layout=spread'
 
 for opt in "$@"; do
 	shift
@@ -1380,16 +1403,16 @@ while getopts ":b:s:h" opt; do
 	esac
 done
 
-YCOMMOPT='--center --image-on-top --wrap --sticky --on-top --buttons-layout=spread'
-
-if [ -z $SLEEPMULTIPLIER ]; then
-	SLEEPMULTIPLIER=1
-else
+if echo $SLEEPMULTIPLIER | grep -Eq '^[.]?[0-9]+$'; then
 	true
+else
+	echo -e "\e[1;33mwarning: invalid or empty sleep-multiplier. Set to 1\e[0m"
+	SLEEPMULTIPLIER=1
 fi
 
-if [ -z $BUS ]; then
-	display_selection
-else
+if echo $BUS | grep -Eq '^[0-9]+$'; then
 	load_menu_items
+else
+	echo -e "\e[1;33mwarning: invalid or empty bus number. Redirecting to display selection\e[0m"
+	display_selection
 fi
