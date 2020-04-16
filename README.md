@@ -1,6 +1,6 @@
 # yddcutil
 
-# Version:    0.0.1
+# Version:    0.1.0
 # Author:     KeyofBlueS
 # Repository: https://github.com/KeyofBlueS/yddcutil
 # License:    GNU General Public License v3.0, https://opensource.org/licenses/GPL-3.0
@@ -34,9 +34,18 @@ sudo ln -s /opt/yddcutil/yddcutil.sh /usr/local/bin/yddcutil
 ```sh
 $ yddcutil
 ```
+
+### IMPORTANT NOTE ABOUT --sleep-multiplier and --max-retries options:
+Lowering --sleep-multiplier can really make yddcutil faster, but lowering it too much can only make speed worse and increase the
+chances to get/set incorrect values. In this last case, You could increase --max-retries value to have the possibility to get/set correct values
+but bear in mind that doing so will make speed even worse.
+Just find the right balance between --sleep-multiplier and --max-retries options and remember that a monitor could react differently
+from another one. The default values should be ok for most monitors.
+
 ```
 Options:
 -b, --bus <bus-number>		I2C bus number
--s, --sleep-multiplier <VALUE>	Applies a multiplication factor to the DDC/CI specified sleep times
+-s, --sleep-multiplier <VALUE>	Applies a multiplication factor to the DDC/CI specified sleep times (Default 0.500)
+-m, --max-retries <VALUE>	Times setvcp/getvcp must be tried again if their exit status is non zero (Default 15)
 -h, --help			Show this help
 ```
