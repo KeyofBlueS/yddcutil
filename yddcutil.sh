@@ -2,7 +2,7 @@
 
 # yddcutil
 
-# Version:    0.1.0
+# Version:    0.1.1
 # Author:     KeyofBlueS
 # Repository: https://github.com/KeyofBlueS/yddcutil
 # License:    GNU General Public License v3.0, https://opensource.org/licenses/GPL-3.0
@@ -12,13 +12,12 @@ function display_selection() {
 	unset i2clists
 	unset BUS
 	step=display_selection
-	MONITORS="$(ddcutil --async detect | grep -Ev "Display |EDID synopsis:|Manufacture year:|EDID version:|VCP version:")"
+	MONITORS="$(ddcutil --async --terse detect | grep -Ev "Display ")"
 	DETECT="$(echo "${MONITORS}" | grep "I2C bus:" | awk -F'i2c-' '{print $2}')"
 	for i2clist in ${DETECT}; do
 		i2clists="${i2clists}${i2clist}!"
 	done
 	i2clists="$(echo "${i2clists}" | rev | cut -c 2- | rev)"
-
 	INIZIALIZE="$(yad ${YCOMMOPT} --window-icon "monitor" --image "monitor" --title="Display Selection" --text="Please select a Display:
 $( echo "${MONITORS}")" --buttons-layout=center --form --field="i2c:CB" "$i2clists" --field="sleep multiplier:NUM" "${SLEEPMULTIPLIER}"!0.000..10!0.050!3 --field="max retries:NUM" "${MAX_RETRIES}"!3..20!1!0 --button="Start"!forward:0 \
 --button="Help"!help-about-symbolic:97 \
@@ -59,7 +58,7 @@ $( echo "${MONITORS}")" --buttons-layout=center --form --field="i2c:CB" "$i2clis
 
 function load_menu_items() {
 
-	CAPABILITIES="$(ddcutil capabilities --sleep-multiplier="${SLEEPMULTIPLIER}" --bus="${BUS}" --nodetect --verbose)"
+	CAPABILITIES="$(ddcutil capabilities --sleep-multiplier="${SLEEPMULTIPLIER}" --bus="${BUS}" --verbose)"
 	if echo "${CAPABILITIES}" | grep -iq "Feature: 10"; then
 		true
 	else
@@ -1193,7 +1192,7 @@ $GREENGAIN
 $BLUEGAIN
 $VOLUME"
 	echo "$INFO" | \
-	yad ${YCOMMOPT} --window-icon "monitor" --image "stock_dialog-info" --title="${VENDOR} ${MODEL}" --text="MENU > Info" --width=1024 --height=500 --text-info ${INFOBUTTON} --button="Go Back"!back:98
+	yad ${YCOMMOPT} --window-icon "monitor" --image "stock_dialog-info" --title="${VENDOR} ${MODEL}" --text="MENU > Info" --width=500 --height=500 --text-info ${INFOBUTTON} --button="Go Back"!back:98
 	info_choice="${?}"
 	if [ "${info_choice}" -eq 1 ]; then
 		info_advanced_menu
@@ -1281,7 +1280,7 @@ function ddcutil_setvcp() {
 	VALUE="${2}"
 	RETRY=0
 	while true; do
-		if ddcutil --sleep-multiplier="${SLEEPMULTIPLIER}" --bus="${BUS}" --nodetect setvcp "${FEATURE}" ${VALUE}; then
+		if ddcutil --sleep-multiplier="${SLEEPMULTIPLIER}" --bus="${BUS}" setvcp "${FEATURE}" ${VALUE}; then
 			break
 		elif [ "${RETRY}" = "${MAX_RETRIES}" ]; then
 			break
@@ -1303,7 +1302,7 @@ function ddcutil_getvcp() {
 	fi
 	RETRY=0
 	while true; do
-		if GETVCP="$(ddcutil --sleep-multiplier="${SLEEPMULTIPLIER}" --bus="${BUS}" --nodetect ${terse} getvcp "${FEATURE}")"; then
+		if GETVCP="$(ddcutil --sleep-multiplier="${SLEEPMULTIPLIER}" --bus="${BUS}" ${terse} getvcp "${FEATURE}")"; then
 			break
 		elif [ "${RETRY}" = "${MAX_RETRIES}" ]; then
 			break
